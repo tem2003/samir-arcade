@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bit Miner: Ultra Clean</title>
+
+<style>
+body {
+    font-family: 'Courier New', monospace;
+    background: #020617;
+    color: #10b981;
+    text-align: center;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+
+    /* 🔥 FIX: disable selection */
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.game-container {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 15px;
+    border: 2px solid #10b981;
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+    width: 450px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.header {
+    background: #1e293b;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #334155;
+}
+
+#bit-count {
+    font-size: 3rem;
+    font-weight: bold;
+    margin: 5px 0;
+    color: #fff;
+}
+
+.stats-bar {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-around;
+    font-weight: bold;
+}
+
+#server-btn {
+    width: 150px;
+    height: 150px;
+    background: #0f172a;
+    border: 4px solid #10b981;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 5rem;
+    transition: 0.15s;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 10px;
+
+    box-shadow: 0 0 20px #10b981;
+
+    /* 🔥 FIX: no selection / drag */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#server-btn:active {
+    transform: scale(0.85);
+}
+
+#shop-list {
+    overflow-y: scroll;
+    flex-grow: 1;
+    margin-top: 10px;
+    padding-right: 10px;
+}
+
+.upgrade {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    border: 1px solid #334155;
+}
+
+.upgrade.disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.upg-info { text-align: left; }
+.upg-name { font-weight: bold; color: #f8fafc; }
+.upg-cost { color: #f59e0b; font-size: 0.8rem; }
+.upg-count { color: #475569; font-size: 1.2rem; }
+
+#rebirth-container {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: rgba(15, 23, 42, 0.98);
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.rebirth-btn {
+    background: #f59e0b;
+    padding: 20px 40px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    border: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+    <div id="rebirth-container">
+        <h2 style="color: #f59e0b;">EVOLUTION COMPLETE</h2>
+        <p style="color: white;">+50% POWER BOOST</p>
+        <button class="rebirth-btn" onclick="rebirth()">REBIRTH</button>
+    </div>
+
+    <div class="header">
+        <div id="bit-count">0</div>
+        <div class="stats-bar">
+            <span id="bps-val">0 BPS</span>
+            <span id="mult-val">100%</span>
+        </div>
+
+        <div id="server-btn" onclick="mine()">📟</div>
+        <div id="rank-name">LEGACY</div>
+    </div>
+
+    <div id="shop-list"></div>
+</div>
+
+<script>
+let bits = 0;
+let bps = 0;
+let clickPower = 1;
+let totalPurchased = 0;
+let rebirthMultiplier = 1.0;
+let rebirths = 0;
+
+const stages = [
+    { min: 0, icon: "📟", rank: "LEGACY", color: "#64748b" },
+    { min: 5, icon: "💻", rank: "LAPTOP", color: "#10b981" },
+    { min: 10, icon: "🖥️", rank: "WORKSTATION", color: "#3b82f6" },
+    { min: 20, icon: "👺🌍", rank: "EARTH SMASHER", color: "#ef4444" },
+    { min: 25, icon: "💠", rank: "SIMULATION", color: "#f59e0b" }
+];
+
+let upgrades = [
+    { name: "Sticky Notes", baseCost: 10, cost: 10, power: 1, type: "click", count: 0 },
+    { name: "Coffee Machine", baseCost: 50, cost: 50, power: 2, type: "auto", count: 0 },
+    { name: "Mechanical Mouse", baseCost: 200, cost: 200, power: 5, type: "click", count: 0 },
+    { name: "Dual Monitors", baseCost: 600, cost: 600, power: 15, type: "auto", count: 0 },
+    { name: "Gaming Chair", baseCost: 1500, cost: 1500, power: 45, type: "auto", count: 0 },
+    { name: "Overclocked RAM", baseCost: 4000, cost: 4000, power: 25, type: "click", count: 0 },
+    { name: "Fiber Connection", baseCost: 10000, cost: 10000, power: 150, type: "auto", count: 0 },
+    { name: "Home Server", baseCost: 25000, cost: 25000, power: 400, type: "auto", count: 0 },
+    { name: "Pro Scripting", baseCost: 60000, cost: 60000, power: 100, type: "click", count: 0 },
+    { name: "Office Floor", baseCost: 150000, cost: 150000, power: 1500, type: "auto", count: 0 },
+    { name: "Data Warehouse", baseCost: 400000, cost: 400000, power: 4500, type: "auto", count: 0 },
+    { name: "AI Assistant", baseCost: 1000000, cost: 1000000, power: 500, type: "click", count: 0 },
+    { name: "Underground Bunker", baseCost: 2500000, cost: 2500000, power: 15000, type: "auto", count: 0 },
+    { name: "Satellite Mesh", baseCost: 7000000, cost: 7000000, power: 40000, type: "auto", count: 0 },
+    { name: "Quantum Core", baseCost: 20000000, cost: 20000000, power: 2500, type: "click", count: 0 },
+    { name: "Mars Colony Hub", baseCost: 60000000, cost: 60000000, power: 150000, type: "auto", count: 0 },
+    { name: "Dyson Swarm", baseCost: 200000000, cost: 200000000, power: 500000, type: "auto", count: 0 },
+    { name: "Neural Link", baseCost: 750000000, cost: 750000000, power: 15000, type: "click", count: 0 },
+    { name: "Black Hole Miner", baseCost: 2000000000, cost: 2000000000, power: 2000000, type: "auto", count: 0 },
+    { name: "Galaxy Network", baseCost: 10000000000, cost: 10000000000, power: 10000000, type: "auto", count: 0 },
+    { name: "Time Loop Script", baseCost: 50000000000, cost: 50000000000, power: 100000, type: "click", count: 0 },
+    { name: "Multiverse Node", baseCost: 250000000000, cost: 250000000000, power: 75000000, type: "auto", count: 0 },
+    { name: "Reality Matrix", baseCost: 1000000000000, cost: 1000000000000, power: 250000000, type: "auto", count: 0 },
+    { name: "Universal Root", baseCost: 10000000000000, cost: 10000000000000, power: 1000000, type: "click", count: 0 },
+    { name: "The Simulation", baseCost: 100000000000000, cost: 100000000000000, power: 2000000000, type: "auto", count: 0 }
+];
+
+function mine() {
+    bits += (clickPower * rebirthMultiplier);
+
+    const btn = document.getElementById('server-btn');
+    btn.style.transform = "scale(0.9)";
+    setTimeout(() => btn.style.transform = "", 80);
+
+    updateUI();
+    renderShop(); // 🔥 THIS fixes everything
+}
+
+function buy(index) {
+    let u = upgrades[index];
+    if (bits < u.cost) return;
+
+    bits -= u.cost;
+    u.count++;
+    totalPurchased++;
+
+    if (u.type === "click") clickPower += u.power;
+    else bps += u.power;
+
+    u.cost = Math.floor(u.cost * 1.5);
+
+    checkState();
+    renderShop();
+    updateUI();
+}
+
+function checkState() {
+    let currentStage = stages[0];
+    for (let s of stages) {
+        if (totalPurchased >= s.min) currentStage = s;
+    }
+
+    const btn = document.getElementById('server-btn');
+    btn.innerHTML = currentStage.icon;
+    btn.style.borderColor = currentStage.color;
+    btn.style.boxShadow = `0 0 20px ${currentStage.color}`;
+
+    document.getElementById('rank-name').innerText = currentStage.rank;
+    document.getElementById('rank-name').style.color = currentStage.color;
+
+    if (upgrades.every(u => u.count > 0)) {
+        document.getElementById('rebirth-container').style.display = 'flex';
+    }
+}
+
+function rebirth() {
+    rebirths++;
+    rebirthMultiplier += 0.5;
+
+    bits = 0;
+    bps = 0;
+    clickPower = 1;
+    totalPurchased = 0;
+
+    upgrades.forEach(u => {
+        u.count = 0;
+        u.cost = u.baseCost; // FIXED
+    });
+
+    let god = upgrades.find(u => u.name.startsWith("GOD MOD"));
+    if (!god) {
+        upgrades.push({
+            name: "GOD MOD",
+            baseCost: 5e14,
+            cost: 5e14,
+            power: 5e9,
+            type: "auto",
+            count: 0
+        });
+    } else {
+        god.power *= 2;
+        god.cost *= 2;
+    }
+
+    document.getElementById('rebirth-container').style.display = 'none';
+
+    renderShop();
+    updateUI();
+}
+
+function renderShop() {
+    const list = document.getElementById('shop-list');
+    list.innerHTML = '';
+
+    upgrades.forEach((u, index) => {
+        const div = document.createElement('div');
+
+        // purely visual
+        if (bits < u.cost) {
+            div.classList.add('upgrade', 'disabled');
+        } else {
+            div.classList.add('upgrade');
+        }
+
+        // 🔥 ALWAYS allow click → logic handled in buy()
+        div.onclick = () => buy(index);
+
+        const displayCost =
+            u.cost >= 1e12 ? (u.cost/1e12).toFixed(1) + "T" :
+            u.cost >= 1e9 ? (u.cost/1e9).toFixed(1) + "B" :
+            u.cost >= 1e6 ? (u.cost/1e6).toFixed(1) + "M" :
+            u.cost.toLocaleString();
+
+        div.innerHTML = `
+            <div class="upg-info">
+                <span class="upg-name">${u.name}</span>
+                <span class="upg-cost">${displayCost}</span>
+            </div>
+            <span class="upg-count">${u.count}</span>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+function updateUI() {
+    document.getElementById('bit-count').innerText =
+        bits >= 1e12 ? (bits/1e12).toFixed(2) + "T" : Math.floor(bits).toLocaleString();
+
+    document.getElementById('bps-val').innerText =
+        Math.floor(bps * rebirthMultiplier).toLocaleString() + " BPS";
+
+    document.getElementById('mult-val').innerText =
+        Math.floor(rebirthMultiplier * 100) + "%";
+}
+
+setInterval(() => {
+    bits += (bps * rebirthMultiplier / 10);
+    updateUI();
+}, 100);
+
+renderShop();
+checkState();
+</script>
+
+</body>
+</html>
