@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplication Brain Trainer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        .problem {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            color: #333;
+        }
+        .answer {
+            font-size: 2.5rem;
+            color: #28a745;
+            height: 3.5rem;
+            margin-bottom: 1rem;
+            visibility: hidden;
+        }
+        .controls, .settings {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        button {
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-show { background-color: #007bff; color: white; }
+        .btn-next { background-color: #6c757d; color: white; }
+        .btn-setup { background-color: #f8f9fa; border: 1px solid #ddd; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="problem-display" class="problem">0 × 0</div>
+    <div id="answer-display" class="answer">0</div>
+    
+    <div class="controls">
+        <button class="btn-show" onclick="toggleAnswer()">Show Answer</button>
+        <button class="btn-next" onclick="generateNumbers()">New Numbers</button>
+        <button class="btn-setup" onclick="toggleSetup(true)">⚙️ Setup Digits</button>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSetup(false)"></div>
+<div class="modal" id="setup-modal">
+    <h3>Trainer Settings</h3>
+    <p>Digits for Number 1: <input type="number" id="digits1" value="2" min="1" max="5"></p>
+    <p>Digits for Number 2: <input type="number" id="digits2" value="1" min="1" max="5"></p>
+    <button class="btn-show" style="width: 100%" onclick="toggleSetup(false)">Save & Close</button>
+</div>
+
+<script>
+    let num1, num2;
+
+    function getRandomInt(digits) {
+        const min = Math.pow(10, digits - 1);
+        const max = Math.pow(10, digits) - 1;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateNumbers() {
+        const d1 = document.getElementById('digits1').value;
+        const d2 = document.getElementById('digits2').value;
+        
+        num1 = getRandomInt(d1);
+        num2 = getRandomInt(d2);
+        
+        document.getElementById('problem-display').innerText = `${num1} × ${num2}`;
+        const ansDiv = document.getElementById('answer-display');
+        ansDiv.innerText = num1 * num2;
+        ansDiv.style.visibility = 'hidden';
+    }
+
+    function toggleAnswer() {
+        document.getElementById('answer-display').style.visibility = 'visible';
+    }
+
+    function toggleSetup(show) {
+        const display = show ? 'block' : 'none';
+        document.getElementById('setup-modal').style.display = display;
+        document.getElementById('overlay').style.display = display;
+        if(!show) generateNumbers();
+    }
+
+    // Initialize on load
+    generateNumbers();
+</script>
+
+</body>
+</html>

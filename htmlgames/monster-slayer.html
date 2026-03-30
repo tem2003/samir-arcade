@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Slayer RPG</title>
+    <style>
+        :root { --gold: #ffd700; --hp: #ff4d4d; --dmg: #ffa500; --bg: #1a1a1a; --card: #2a2a2a; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #eee; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        #game-container { width: 95%; max-width: 500px; background: var(--card); padding: 25px; border-radius: 15px; border: 2px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .stats-header { display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }
+        .gold-text { color: var(--gold); }
+        
+        #monster-area { text-align: center; padding: 20px; border: 1px solid #333; border-radius: 10px; background: #222; margin-bottom: 20px; }
+        #monster-name { font-size: 1.5rem; color: #ff4d4d; margin-bottom: 10px; }
+        .hp-bar { width: 100%; height: 20px; background: #444; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        #monster-hp-fill { height: 100%; background: var(--hp); width: 100%; transition: width 0.2s; }
+        
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; transition: 0.2s; }
+        #attack-btn { background: #e67e22; color: white; grid-column: span 2; font-size: 1.2rem; }
+        #attack-btn:hover { background: #d35400; }
+        
+        .shop-area { margin-top: 30px; border-top: 1px dashed #555; padding-top: 20px; }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; background: #333; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .shop-btn { background: #27ae60; color: white; padding: 8px 12px; font-size: 0.8rem; }
+        .shop-btn:disabled { background: #555; cursor: not-allowed; }
+        
+        #log { font-size: 0.8rem; color: #aaa; margin-top: 15px; height: 60px; overflow-y: hidden; text-align: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="stats-header">
+        <span>LVL: <span id="player-lvl">1</span></span>
+        <span class="gold-text">GOLD: <span id="player-gold">0</span></span>
+    </div>
+
+    <div id="monster-area">
+        <div id="monster-name">Wild Slime</div>
+        <div class="hp-bar"><div id="monster-hp-fill"></div></div>
+        <div style="font-size: 0.9rem">HP: <span id="m-hp-cur">10</span> / <span id="m-hp-max">10</span></div>
+    </div>
+
+    <div class="action-btns">
+        <button id="attack-btn" onclick="Game.attack()">⚔️ ATTACK MONSTER</button>
+        <div style="text-align: center; grid-column: span 2; margin: 10px 0;">
+            Your HP: <span id="p-hp-cur" style="color:var(--hp)">50</span> / <span id="p-hp-max">50</span>
+        </div>
+    </div>
+
+    <div id="log">Welcome, Hero. A monster approaches!</div>
+
+    <div class="shop-area">
+        <h3 style="margin-top:0">The Blacksmith</h3>
+        <div class="shop-item">
+            <span>Better Sword (+5 DMG)</span>
+            <button class="shop-btn" id="buy-sword" onclick="Game.buy('sword')">Cost: 20g</button>
+        </div>
+        <div class="shop-item">
+            <span>Plate Armor (+20 HP)</span>
+            <button class="shop-btn" id="buy-armor" onclick="Game.buy('armor')">Cost: 30g</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const Game = {
+        player: {
+            hp: 50, maxHp: 50, dmg: 5, gold: 0, lvl: 1, 
+            swordLevel: 1, armorLevel: 1
+        },
+        monster: {
+            name: "Wild Slime", hp: 10, maxHp: 10, dmg: 2, goldDrop: 5
+        },
+        names: ["Goblin", "Skeleton", "Orc", "Dark Knight", "Dragon", "Beholder", "Wraith", "Hydra"],
+
+        init() {
+            this.updateUI();
+        },
+
+        attack() {
+            // Player attacks monster
+            let pDmg = this.player.dmg + Math.floor(Math.random() * 3);
+            this.monster.hp -= pDmg;
+            this.log(`You hit ${this.monster.name} for ${pDmg} damage!`);
+
+            if (this.monster.hp <= 0) {
+                this.victory();
+            } else {
+                // Monster attacks player
+                let mDmg = this.monster.dmg + Math.floor(Math.random() * 2);
+                this.player.hp -= mDmg;
+                this.log(`${this.monster.name} hits you for ${mDmg} damage!`);
+                
+                if (this.player.hp <= 0) {
+                    this.gameOver();
+                }
+            }
+            this.updateUI();
+        },
+
+        victory() {
+            this.player.gold += this.monster.goldDrop;
+            this.player.lvl++;
+            this.log(`Victory! Gained ${this.monster.goldDrop} Gold.`);
+            this.spawnMonster();
+        },
+
+        spawnMonster() {
+            let nameIdx = Math.floor(Math.random() * this.names.length);
+            this.monster.name = this.names[nameIdx];
+            // Monster scales with player level
+            this.monster.maxHp = 10 + (this.player.lvl * 5);
+            this.monster.hp = this.monster.maxHp;
+            this.monster.dmg = 2 + Math.floor(this.player.lvl / 2);
+            this.monster.goldDrop = 5 + (this.player.lvl * 2);
+            
+            // Full heal player on level up (optional RPG mechanic)
+            this.player.hp = this.player.maxHp;
+        },
+
+        buy(item) {
+            if (item === 'sword' && this.player.gold >= this.swordCost()) {
+                this.player.gold -= this.swordCost();
+                this.player.dmg += 5;
+                this.player.swordLevel++;
+                this.log("Upgraded your sword!");
+            } else if (item === 'armor' && this.player.gold >= this.armorCost()) {
+                this.player.gold -= this.armorCost();
+                this.player.maxHp += 20;
+                this.player.hp = this.player.maxHp;
+                this.player.armorLevel++;
+                this.log("Upgraded your armor!");
+            }
+            this.updateUI();
+        },
+
+        swordCost: () => Game.player.swordLevel * 20,
+        armorCost: () => Game.player.armorLevel * 30,
+
+        log(msg) {
+            const logBox = document.getElementById('log');
+            logBox.innerHTML = msg;
+        },
+
+        updateUI() {
+            document.getElementById('player-lvl').textContent = this.player.lvl;
+            document.getElementById('player-gold').textContent = this.player.gold;
+            document.getElementById('p-hp-cur').textContent = Math.max(0, this.player.hp);
+            document.getElementById('p-hp-max').textContent = this.player.maxHp;
+            
+            document.getElementById('monster-name').textContent = this.monster.name;
+            document.getElementById('m-hp-cur').textContent = Math.max(0, this.monster.hp);
+            document.getElementById('m-hp-max').textContent = this.monster.maxHp;
+            
+            const hpPercent = (this.monster.hp / this.monster.maxHp) * 100;
+            document.getElementById('monster-hp-fill').style.width = Math.max(0, hpPercent) + "%";
+
+            // Update Shop buttons
+            document.getElementById('buy-sword').textContent = `Cost: ${this.swordCost()}g`;
+            document.getElementById('buy-armor').textContent = `Cost: ${this.armorCost()}g`;
+            
+            document.getElementById('buy-sword').disabled = this.player.gold < this.swordCost();
+            document.getElementById('buy-armor').disabled = this.player.gold < this.armorCost();
+        },
+
+        gameOver() {
+            alert("You died! Game will restart.");
+            location.reload();
+        }
+    };
+
+    Game.init();
+</script>
+</body>
+</html>
