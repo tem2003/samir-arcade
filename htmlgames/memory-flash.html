@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Color Game</title>
+
+<style>
+body {
+    background: #111;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+}
+
+#score, #highscore {
+    font-size: 22px;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 120px);
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 15px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+.btn.active {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px white;
+}
+
+.red { background: #e11d48; }
+.green { background: #22c55e; }
+.blue { background: #3b82f6; }
+.yellow { background: #eab308; }
+
+#start {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Memory Color Game</h1>
+<div id="score">Score: 0</div>
+<div id="highscore">High Score: 0</div>
+
+<button id="start" onclick="startGame()">Start Game</button>
+
+<div class="buttons">
+    <div class="btn red" onclick="playerClick('red')" id="red"></div>
+    <div class="btn green" onclick="playerClick('green')" id="green"></div>
+    <div class="btn blue" onclick="playerClick('blue')" id="blue"></div>
+    <div class="btn yellow" onclick="playerClick('yellow')" id="yellow"></div>
+</div>
+
+<script>
+const colors = ["red", "green", "blue", "yellow"];
+
+let sequence = [];
+let playerIndex = 0;
+let score = 0;
+let playing = false;
+
+// 🔊 SOUND SETUP
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const tones = {
+    red: 261.6,
+    green: 329.6,
+    blue: 392.0,
+    yellow: 523.3
+};
+
+function playTone(freq) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = freq;
+    osc.type = "sine";
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+
+    setTimeout(() => {
+        osc.stop();
+    }, 300);
+}
+
+// 💾 LOAD HIGH SCORE
+let highScore = localStorage.getItem("colorGameHigh") || 0;
+document.getElementById("highscore").innerText = "High Score: " + highScore;
+
+function startGame() {
+    sequence = [];
+    score = 0;
+    nextRound();
+}
+
+function nextRound() {
+    playerIndex = 0;
+    sequence.push(colors[Math.floor(Math.random() * colors.length)]);
+    updateUI();
+    playSequence();
+}
+
+async function playSequence() {
+    playing = true;
+
+    for (let color of sequence) {
+        await flash(color);
+    }
+
+    playing = false;
+}
+
+function flash(color) {
+    return new Promise(resolve => {
+        const el = document.getElementById(color);
+
+        el.classList.add("active");
+        playTone(tones[color]);
+
+        setTimeout(() => {
+            el.classList.remove("active");
+            setTimeout(resolve, 300);
+        }, 600);
+    });
+}
+
+function playerClick(color) {
+    if (playing) return;
+
+    flash(color); // visual + sound feedback
+
+    if (color === sequence[playerIndex]) {
+        playerIndex++;
+
+        if (playerIndex === sequence.length) {
+            score++;
+            setTimeout(nextRound, 800);
+        }
+    } else {
+        gameOver();
+    }
+}
+
+function gameOver() {
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("colorGameHigh", highScore);
+    }
+
+    alert("Wrong! Score: " + score);
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById("score").innerText = "Score: " + score;
+    document.getElementById("highscore").innerText = "High Score: " + highScore;
+}
+</script>
+
+</body>
+</html>
